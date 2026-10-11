@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Indian State Finding Game</title>
+<style>
+:root{--navy:#10213b;--blue:#1769aa;--gold:#ffbd45;--paper:#f4f8fc;--green:#16834a;--red:#c62828}
+*{box-sizing:border-box}body{margin:0;background:var(--paper);font-family:system-ui,-apple-system,Segoe UI,sans-serif;color:#17243a}
+header{background:linear-gradient(135deg,#10213b,#1769aa);color:white;padding:18px 16px 20px;text-align:center}
+h1{font-size:clamp(22px,5vw,32px);margin:0 0 4px}header p{margin:0;color:#dbeafe;font-size:14px}
+main{max-width:1050px;margin:auto;padding:14px;display:grid;gap:12px}
+.panel{background:white;border-radius:16px;padding:14px;box-shadow:0 4px 18px #10213b12}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.stat{background:#eef5ff;border-radius:12px;padding:10px;text-align:center}.stat small{display:block;color:#53657e;font-size:12px}.stat strong{font-size:21px}
+.prompt{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}.prompt h2{margin:4px 0;font-size:clamp(19px,4vw,25px)}.pill{background:#fff0cf;color:#6c4700;border-radius:999px;padding:6px 10px;font-size:12px;font-weight:800}
+.controls{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}button,select{font:inherit;border:0;border-radius:10px;padding:10px 13px;cursor:pointer}button{background:var(--blue);color:white;font-weight:700}button.secondary{background:#e8eef6;color:#20334d}button:disabled{opacity:.45}
+#mapWrap{position:relative;overflow:hidden;border:1px solid #dce5f0;border-radius:14px;background:#fafdff;min-height:360px}
+#map{width:100%;height:min(66vh,650px);min-height:360px;display:block;touch-action:pan-y}
+.state{fill:#dbeafe;stroke:#fff;stroke-width:.55;vector-effect:non-scaling-stroke;cursor:pointer;transition:fill .12s}
+.state:focus{outline:none;stroke:#10213b;stroke-width:2}.state:hover{fill:#a9d3ff}.state.correct{fill:#22a35a!important}.state.wrong{fill:#e34d4d!important}.state.done{fill:#a7dfbd}
+#feedback{min-height:44px;margin-top:10px;padding:10px 12px;background:#f0f5fb;border-radius:10px;font-weight:650}
+#feedback.good{background:#e5f7ec;color:#126b39}#feedback.bad{background:#ffeded;color:#a11e1e}
+#mapStatus{font-size:12px;color:#607089;margin-top:7px}
+#learnList{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:6px;max-height:230px;overflow:auto}
+.learnItem{font-size:13px;padding:8px;background:#f4f7fb;border-radius:8px;display:flex;justify-content:space-between;gap:8px}
+footer{text-align:center;font-size:12px;color:#617089;padding:10px}
+@media(min-width:820px){main{grid-template-columns:minmax(0,1.7fr) minmax(280px,1fr);align-items:start}header{padding:22px} .stats{grid-template-columns:1fr}.side{display:grid;gap:12px}#map{height:650px}}
+</style>
+</head>
+<body>
+<header><div style="font-size:12px;letter-spacing:2px;font-weight:800;color:#ffcf70;margin-bottom:6px">CREATED BY RANJEET SINGH</div><h1>🇮🇳 Indian State Finding Game</h1><p>भारत के राज्य और केंद्र शासित प्रदेश पहचानें • Learn by playing</p></header>
+<main>
+<section class="panel">
+ <div class="prompt"><div><span class="pill" id="levelPill">LEVEL 1 · EASY</span><h2 id="question">Map data load ho raha hai…</h2><div id="subQuestion">Map par sahi region ko tap karein.</div></div><span class="pill" id="modePill">STATES + UTs</span></div>
+ <div class="stats" style="margin-top:12px">
+  <div class="stat"><small>Score / स्कोर</small><strong id="score">0</strong></div>
+  <div class="stat"><small>Correct / सही</small><strong id="correct">0</strong></div>
+  <div class="stat"><small>Question / प्रश्न</small><strong id="progress">0/36</strong></div>
+ </div>
+ <div class="controls">
+  <select id="scope" aria-label="Choose category"><option value="all">States + UTs / सभी</option><option value="state">States only / राज्य</option><option value="ut">Union Territories only / केंद्र शासित प्रदेश</option></select>
+  <button id="startBtn">Start / शुरू करें</button><button id="skipBtn" class="secondary" disabled>Skip / छोड़ें</button><button id="resetViewBtn" class="secondary">Fit Map</button>
+ </div>
+ <div id="mapWrap"><svg id="map" viewBox="0 0 620 680" role="img" aria-label="Interactive map of Indian states and union territories"><text x="310" y="320" text-anchor="middle" fill="#52657c">Loading map data…</text></svg></div>
+ <div id="feedback" role="status" aria-live="polite">Start dabayein. Pehle india-states.geojson file isi folder mein rakhein.</div>
+ <div id="mapStatus">Website par map load karne ke liye internet chahiye. Offline use ke liye GeoJSON file bhi saath rakhein.</div>
+</section>
+<aside class="side">
+ <section class="panel"><h3 style="margin:0 0 8px">How to play / कैसे खेलें</h3><ol style="padding-left:20px;margin:0;line-height:1.7;font-size:14px"><li>Start dabayein.</li><li>Question mein diye gaye state/UT ko map par tap karein.</li><li>Sahi jawab = +10 points. Galat jawab par sahi region green ho jayega.</li><li>Chhote UTs ko select karna aasaan ho, isliye question ke dauran map target region par zoom hota hai.</li></ol></section>
+ <section class="panel"><h3 style="margin:0 0 8px">Capitals / राजधानियाँ</h3><div id="learnList"><div class="learnItem">Map load hone par list yahan dikhegi.</div></div></section>
+ <section class="panel"><h3 style="margin:0 0 8px">Level guide</h3><div style="font-size:14px;line-height:1.7"><b>Level 1 · Easy:</b> States<br><b>Level 2 · Medium:</b> States + UTs<br><b>Level 3 · Hard:</b> Mixed challenge</div><p style="font-size:12px;color:#617089;margin-bottom:0">Map source and attribution: see setup notes below. Verify boundaries against official Survey of India maps for formal use.</p></section>
+</aside>
+</main>
+<footer>Made for students • Works online with map data; offline mode needs the GeoJSON file • No login, ads, or data collection</footer>
+<script>
+const $=id=>document.getElementById(id);
+const capitals={
+"Andhra Pradesh":"Amaravati","Arunachal Pradesh":"Itanagar","Assam":"Dispur","Bihar":"Patna","Chhattisgarh":"Raipur","Goa":"Panaji","Gujarat":"Gandhinagar","Haryana":"Chandigarh","Himachal Pradesh":"Shimla","Jharkhand":"Ranchi","Karnataka":"Bengaluru","Kerala":"Thiruvananthapuram","Madhya Pradesh":"Bhopal","Maharashtra":"Mumbai","Manipur":"Imphal","Meghalaya":"Shillong","Mizoram":"Aizawl","Nagaland":"Kohima","Odisha":"Bhubaneswar","Punjab":"Chandigarh","Rajasthan":"Jaipur","Sikkim":"Gangtok","Tamil Nadu":"Chennai","Telangana":"Hyderabad","Tripura":"Agartala","Uttar Pradesh":"Lucknow","Uttarakhand":"Dehradun","West Bengal":"Kolkata",
+"Andaman and Nicobar Islands":"Sri Vijaya Puram (Port Blair)","Chandigarh":"Chandigarh","Dadra and Nagar Haveli and Daman and Diu":"Daman","Delhi":"New Delhi","Jammu and Kashmir":"Srinagar (summer), Jammu (winter)","Ladakh":"Leh","Lakshadweep":"Kavaratti","Puducherry":"Puducherry"
+};
+const hindi={
+"Andhra Pradesh":"आंध्र प्रदेश","Arunachal Pradesh":"अरुणाचल प्रदेश","Assam":"असम","Bihar":"बिहार","Chhattisgarh":"छत्तीसगढ़","Goa":"गोवा","Gujarat":"गुजरात","Haryana":"हरियाणा","Himachal Pradesh":"हिमाचल प्रदेश","Jharkhand":"झारखंड","Karnataka":"कर्नाटक","Kerala":"केरल","Madhya Pradesh":"मध्य प्रदेश","Maharashtra":"महाराष्ट्र","Manipur":"मणिपुर","Meghalaya":"मेघालय","Mizoram":"मिज़ोरम","Nagaland":"नागालैंड","Odisha":"ओडिशा","Punjab":"पंजाब","Rajasthan":"राजस्थान","Sikkim":"सिक्किम","Tamil Nadu":"तमिलनाडु","Telangana":"तेलंगाना","Tripura":"त्रिपुरा","Uttar Pradesh":"उत्तर प्रदेश","Uttarakhand":"उत्तराखंड","West Bengal":"पश्चिम बंगाल","Andaman and Nicobar Islands":"अंडमान और निकोबार द्वीपसमूह","Chandigarh":"चंडीगढ़","Dadra and Nagar Haveli and Daman and Diu":"दादरा और नगर हवेली तथा दमन और दीव","Delhi":"दिल्ली","Jammu and Kashmir":"जम्मू और कश्मीर","Ladakh":"लद्दाख","Lakshadweep":"लक्षद्वीप","Puducherry":"पुदुचेरी"
+};
+let features=[],paths=new Map(),current=null,queue=[],index=0,score=0,correct=0,started=false,answered=false,viewBox=[0,0,620,680];
+const svg=$('map'),NS='http://www.w3.org/2000/svg';
+function normName(p){return p.name||p.NAME_1||p.st_nm||p.ST_NM||p.state||p.State||p.NAME||p.shapeName||p.name_1||''}
+function normType(f){let t=(f.properties.type||f.properties.Type||'').toLowerCase();return t.includes('union')||/andaman|chandigarh|dadra|daman|delhi|jammu|ladakh|lakshadweep|puducherry/i.test(normName(f.properties))?'ut':'state'}
+function getCoords(g,out=[]){if(!g)return out;if(g.type==='Polygon')out.push(...g.coordinates.flat(1));else if(g.type==='MultiPolygon')g.coordinates.forEach(p=>out.push(...p.flat(1)));return out}
+function project(lon,lat){return [lon, -lat]}
+function geometryPath(g,transform){
+ let d='';function ring(coords){coords.forEach((pt,i)=>{let [x,y]=transform(pt[0],pt[1]);d+=(i?'L':'M')+x.toFixed(2)+','+y.toFixed(2)});d+='Z'}
+ function poly(p){p.forEach(ring)}
+ if(g.type==='Polygon')poly(g.coordinates);else if(g.type==='MultiPolygon')g.coordinates.forEach(poly);return d;
+}
+function boundsOf(f){let pts=getCoords(f.geometry);return [Math.min(...pts.map(p=>p[0])),Math.min(...pts.map(p=>p[1])),Math.max(...pts.map(p=>p[0])),Math.max(...pts.map(p=>p[1]))]}
+function fitAll(){
+ const all=features.flatMap(f=>getCoords(f.geometry));if(!all.length)return;
+ let minX=Math.min(...all.map(p=>p[0])),maxX=Math.max(...all.map(p=>p[0])),minY=Math.min(...all.map(p=>p[1])),maxY=Math.max(...all.map(p=>p[1]));
+ const pad=18,scale=Math.min((620-2*pad)/(maxX-minX),(680-2*pad)/(maxY-minY));
+ const w=(maxX-minX)*scale,h=(maxY-minY)*scale,ox=(620-w)/2-minX*scale,oy=(680-h)/2+maxY*scale;
+ const tr=(lon,lat)=>[lon*scale+ox,oy-lat*scale];
+ paths.forEach((path,f)=>path.setAttribute('d',geometryPath(f.geometry,tr)));
+ viewBox=[0,0,620,680];svg.setAttribute('viewBox',viewBox.join(' '));$('mapStatus').textContent='Map ready: '+features.length+' regions • Tap the requested region.';
+}
+function focusFeature(f){
+ if(!f)return;let [minX,minY,maxX,maxY]=boundsOf(f);
+ // Keep map's usual projection but zoom around target. Rebuild with all geometry in one shared projection.
+ const all=features.flatMap(x=>getCoords(x.geometry));let gx0=Math.min(...all.map(p=>p[0])),gx1=Math.max(...all.map(p=>p[0])),gy0=Math.min(...all.map(p=>p[1])),gy1=Math.max(...all.map(p=>p[1]));
+ const baseScale=Math.min(584/(gx1-gx0),644/(gy1-gy0)),baseW=(gx1-gx0)*baseScale,baseH=(gy1-gy0)*baseScale,baseOx=(620-baseW)/2-gx0*baseScale,baseOy=(680-baseH)/2+gy1*baseScale;
+ const targetX=((minX+maxX)/2)*baseScale+baseOx,targetY=baseOy-((minY+maxY)/2)*baseScale;
+ let fw=Math.max((maxX-minX)*baseScale,12),fh=Math.max((maxY-minY)*baseScale,12);
+ let zoom=Math.min(12,Math.max(2.2,Math.min(500/fw,540/fh)));
+ let vbW=620/zoom,vbH=680/zoom;let x=targetX-vbW/2,y=targetY-vbH/2;
+ x=Math.max(-80,Math.min(620-vbW+80,x));y=Math.max(-80,Math.min(680-vbH+80,y));
+ svg.setAttribute('viewBox',[x,y,vbW,vbH].join(' '));
+}
+function showFeedback(msg,kind=''){let el=$('feedback');el.textContent=msg;el.className=kind}
+function chooseQueue(){
+ const scope=$('scope').value;let pool=features.filter(f=>scope==='all'||normType(f)===scope);
+ queue=pool.slice().sort(()=>Math.random()-.5);index=0;score=0;correct=0;started=true;answered=false;
+ $('score').textContent=score;$('correct').textContent=correct;$('progress').textContent='0/'+queue.length;$('skipBtn').disabled=false;
+ nextQuestion();
+}
+function nextQuestion(){
+ document.querySelectorAll('.state').forEach(p=>p.classList.remove('correct','wrong'));
+ if(index>=queue.length){current=null;answered=true;fitAll();$('question').textContent='Round complete! / राउंड पूरा हुआ';$('subQuestion').textContent='आपका स्कोर / Your final score: '+score+' / '+(queue.length*10);$('progress').textContent=queue.length+'/'+queue.length;$('skipBtn').disabled=true;showFeedback('शानदार! फिर से खेलने के लिए Start दबाएँ। Great work! Press Start to play again.','good');return}
+ current=queue[index];answered=false;
+ let name=normName(current.properties);$('question').textContent='Find: '+name+' / '+(hindi[name]||name);$('subQuestion').textContent='Capital / राजधानी: answer ke baad dikhegi';$('progress').textContent=index+'/'+queue.length;
+ $('levelPill').textContent='LEVEL '+(index<10?'1 · EASY':index<24?'2 · MEDIUM':'3 · HARD');
+ showFeedback('Map par '+name+' ko tap karein. / Tap the correct region.');
+ focusFeature(current);
+}
+function answer(f){
+ if(!started||!current||answered)return;
+ let n=normName(current.properties),picked=normName(f.properties);
+ const path=paths.get(f);
+ if(f===current||picked===n){answered=true;score+=10;correct++;$('score').textContent=score;$('correct').textContent=correct;path.classList.add('correct');$('subQuestion').textContent='Capital / राजधानी: '+(capitals[n]||current.properties.capital||'—');showFeedback('सही जवाब! Correct! +10 points • '+n+' — '+(capitals[n]||current.properties.capital||'') ,'good');setTimeout(()=>{index++;nextQuestion()},1050)}
+ else{path.classList.add('wrong');showFeedback('गलत जवाब! Try again. / गलत जवाब, फिर कोशिश करें।','bad');setTimeout(()=>path.classList.remove('wrong'),650)}
+}
+function renderMap(){
+ svg.innerHTML='';paths.clear();
+ features.forEach(f=>{const p=document.createElementNS(NS,'path');p.setAttribute('class','state');p.setAttribute('tabindex','0');p.setAttribute('role','button');p.setAttribute('aria-label',normName(f.properties));p.addEventListener('click',()=>answer(f));p.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();answer(f)}});p.appendChild(document.createElementNS(NS,'title')).textContent=normName(f.properties);svg.appendChild(p);paths.set(f,p)});
+ fitAll();
+ $('learnList').innerHTML=features.slice().sort((a,b)=>normName(a.properties).localeCompare(normName(b.properties))).map(f=>{let n=normName(f.properties);return '<div class="learnItem"><span>'+n+'<br><small>'+ (hindi[n]||'')+'</small></span><b>'+ (capitals[n]||f.properties.capital||'—')+'</b></div>'}).join('');
+}
+async function init(){
+ try{
+  let data;
+  try {
+    const localResponse=await fetch('./india-states.geojson');
+    if(!localResponse.ok) throw new Error('Local map data unavailable');
+    data=await localResponse.json();
+  } catch(localError) {
+    const remoteResponse=await fetch('https://raw.githubusercontent.com/iamaanahmad/GeoJson-of-Indian-States/main/indian-states.geojson');
+    if(!remoteResponse.ok) throw new Error('Map data download failed: HTTP '+remoteResponse.status);
+    data=await remoteResponse.json();
+  }
+  features=(data.features||[]).filter(f=>f.geometry&&f.properties&&normName(f.properties));
+  if(features.length<30)throw new Error('GeoJSON mein 36 regions nahi mile. File check karein.');
+  renderMap();$('question').textContent='Ready to play? / खेलने के लिए तैयार?';$('subQuestion').textContent='Start dabayein aur map par sahi region dhoondhein.';showFeedback('Map load ho gaya! Start dabakar khelna shuru karein.','good');
+ }catch(e){$('question').textContent='Map data file not found';$('subQuestion').textContent='index.html ke saath india-states.geojson bhi rakhein.';showFeedback('Internet connection zaroori hai agar local map data file upload nahi ki. Error: '+e.message,'bad');$('mapStatus').textContent='GeoJSON load nahi hua. See setup instructions in the chat.'}
+}
+$('startBtn').addEventListener('click',chooseQueue);$('skipBtn').addEventListener('click',()=>{if(current&&!answered){showFeedback('Skipped: '+normName(current.properties)+' — '+(capitals[normName(current.properties)]||''));index++;setTimeout(nextQuestion,500)}});$('resetViewBtn').addEventListener('click',fitAll);
+init();
+</script>
+</body>
+</html>
